@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>To-Do List</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --panel: #142440;
+    --accent: #2de0c7;
+    --text: #e6edf7;
+    --muted: #8a9bb8;
+    --done: #8a9bb8;
+    --danger: #ff6b6b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+  .container {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 0.3rem;
+  }
+  .stats {
+    font-size: 1.3rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+  }
+  .stats span { color: var(--accent); font-weight: 700; }
+  .input-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .input-row input {
+    flex: 1;
+    padding: 1rem 1.2rem;
+    font-size: 1.2rem;
+    border: 2px solid var(--panel);
+    border-radius: 10px;
+    background: var(--panel);
+    color: var(--text);
+    outline: none;
+    transition: border-color .2s;
+  }
+  .input-row input:focus { border-color: var(--accent); }
+  .input-row button {
+    padding: 1rem 1.4rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: var(--bg);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity .2s;
+  }
+  .input-row button:active { opacity: .8; }
+  ul { list-style: none; }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 1rem 1.2rem;
+    background: var(--panel);
+    border-radius: 10px;
+    margin-bottom: 0.6rem;
+    font-size: 1.25rem;
+  }
+  li.done .text {
+    text-decoration: line-through;
+    color: var(--done);
+  }
+  .cb {
+    width: 2rem; height: 2rem;
+    flex-shrink: 0;
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    color: var(--bg);
+  }
+  li.done .cb { background: var(--accent); }
+  .text { flex: 1; overflow-wrap: break-word; }
+  .del {
+    padding: .4rem .8rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--danger);
+    cursor: pointer;
+  }
+  .del:hover { background: rgba(255,107,107,.15); }
+  .clear-done {
+    margin-top: 1rem;
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.15rem;
+    font-weight: 600;
+    border: 2px solid var(--panel);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .clear-done.has-done { color: var(--accent); border-color: var(--accent); }
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 1.2rem;
+    padding: 2rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>To-Do List</h1>
+  <p class="stats">未完成 <span id="pending">0</span>／總數 <span id="total">0</span></p>
+  <div class="input-row">
+    <input type="text" id="input" placeholder="輸入待辦事項，按 Enter 新增…" autocomplete="off">
+    <button id="addBtn">＋ 新增</button>
+  </div>
+  <ul id="list"></ul>
+  <p class="empty" id="empty" style="display:none">目前沒有待辦事項</p>
+  <button class="clear-done" id="clearBtn">清除已完成</button>
+</div>
+
+<script>
+const KEY = 'todo_items_v1';
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || []; }
+  catch { return []; }
+}
+function save(items) {
+  localStorage.setItem(KEY, JSON.stringify(items));
+}
+
+let items = load();
+
+const listEl = document.getElementById('list');
+const emptyEl = document.getElementById('empty');
+const inputEl = document.getElementById('input');
+const addBtn = document.getElementById('addBtn');
+const clearBtn = document.getElementById('clearBtn');
+const pendingEl = document.getElementById('pending');
+const totalEl = document.getElementById('total');
+
+function render() {
+  listEl.innerHTML = '';
+  items.forEach((item, i) => {
+    const li = document.createElement('li');
+    if (item.done) li.classList.add('done');
+
+    const cb = document.createElement('button');
+    cb.className = 'cb';
+    cb.textContent = item.done ? '✓' : '';
+    cb.setAttribute('aria-label', 'toggle');
+    cb.onclick = () => { item.done = !item.done; save(items); render(); };
+
+    const text = document.createElement('span');
+    text.className = 'text';
+    text.textContent = item.text;
+
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.textContent = '刪除';
+    del.onclick = () => { items.splice(i, 1); save(items); render(); };
+
+    li.append(cb, text, del);
+    listEl.appendChild(li);
+  });
+
+  const total = items.length;
+  const pending = items.filter(i => !i.done).length;
+  totalEl.textContent = total;
+  pendingEl.textContent = pending;
+  emptyEl.style.display = total === 0 ? '' : 'none';
+  clearBtn.classList.toggle('has-done', items.some(i => i.done));
+}
+
+function add() {
+  const t = inputEl.value.trim();
+  if (!t) return;
+  items.push({ text: t, done: false });
+  inputEl.value = '';
+  save(items);
+  render();
+}
+
+addBtn.onclick = add;
+inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') add(); });
+
+clearBtn.onclick = () => {
+  items = items.filter(i => !i.done);
+  save(items);
+  render();
+};
+
+render();
+</script>
+</body>
+</html>
